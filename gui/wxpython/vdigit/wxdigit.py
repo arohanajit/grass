@@ -34,12 +34,143 @@ from core.gcmd import GError
 from core.debug import Debug
 from core.settings import UserSettings
 from vdigit.wxdisplay import DisplayDriver, GetLastError
+import os
+import sys
 
 try:
-    from grass.lib.gis import *
-    from grass.lib.vector import *
-    from grass.lib.vedit import *
-    from grass.lib.dbmi import *
+    from ctypes import pointer, byref, create_string_buffer, c_int, c_double
+    from grass.lib.gis import (
+        G_name_is_fully_qualified,
+        G_find_vector2,
+        GNAME_MAX,
+        GMAPSET_MAX,
+        G_free,
+    )
+    from grass.lib.vector import (
+        Map_info,
+        Vect_new_line_struct,
+        Vect_new_cats_struct,
+        Vect_destroy_line_struct,
+        Vect_destroy_cats_struct,
+        Vect_close,
+        Vect_get_name,
+        Vect_get_mapset,
+        Vect_open_old,
+        Vect_line_alive,
+        Vect_read_line,
+        Vect_new_boxlist,
+        Vect_new_list,
+        Vect_get_line_box,
+        Vect_select_lines_by_box,
+        Vect_list_append,
+        Vect_line_check_intersection,
+        Vect_break_lines_list,
+        Vect_destroy_boxlist,
+        Vect_destroy_list,
+        Vect_get_num_updated_lines,
+        Vect_get_updated_line,
+        Vect_get_updated_line_offset,
+        Vect_reset_updated,
+        Vect_delete_line,
+        Vect_restore_line,
+        Vect_get_line_type,
+        Vect_get_centroid_area,
+        Vect_get_num_dblinks,
+        Vect_get_dblink,
+        Vect_get_area_boundaries,
+        Vect_get_line_areas,
+        Vect_get_area_centroid,
+        Vect_set_updated,
+        Vect_reset_line,
+        Vect_append_point,
+        Vect_get_num_lines,
+        Vect_rewrite_line,
+        Vect_snap_lines_list,
+        Vect_get_field,
+        Vect_is_3d,
+        Vect_line_length,
+        Vect_area_alive,
+        Vect_get_area_area,
+        Vect_get_area_points,
+        Vect_area_perimeter,
+        Vect_cat_set,
+        Vect_field_cat_del,
+        Vect_cidx_get_num_fields,
+        Vect_cidx_get_field_number,
+        Vect_cidx_get_num_cats_by_index,
+        Vect_cidx_get_cat_by_index,
+        Vect_reset_cats,
+        Vect_points_distance,
+        Vect_write_line,
+        Vect_get_point_in_area,
+        Vect_get_finfo_topology_info,
+        Vect_get_finfo_geometry_type,
+        Vect_select_lines_by_polygon,
+        GV_POINT,
+        GV_LINE,
+        GV_CENTROID,
+        GV_BOUNDARY,
+        GV_AREA,
+        GV_LINES,
+        GV_POINTS,
+        GV_TOPO_PSEUDO,
+        WITHOUT_Z,
+        bound_box,
+    )
+    from grass.lib.vedit import (
+        Vedit_delete_lines,
+        Vedit_delete_area_centroid,
+        Vedit_move_lines,
+        Vedit_move_vertex,
+        Vedit_split_lines,
+        Vedit_snap_line,
+        Vedit_flip_lines,
+        Vedit_merge_lines,
+        Vedit_connect_lines,
+        Vedit_copy_lines,
+        Vedit_chtype_lines,
+        Vedit_bulk_labeling,
+        Vedit_select_by_query,
+        Vedit_add_vertex,
+        Vedit_remove_vertex,
+        SNAPVERTEX,
+        SNAP,
+        NO_SNAP,
+        QUERY_UNKNOWN,
+        QUERY_LENGTH,
+        QUERY_DANGLE,
+    )
+    from grass.lib.dbmi import (
+        dbHandle,
+        dbString,
+        dbCursor,
+        db_start_driver,
+        db_init_handle,
+        db_set_handle,
+        db_open_database,
+        db_init_string,
+        db_set_string,
+        db_append_string,
+        db_execute_immediate,
+        db_get_string,
+        db_close_database_shutdown_driver,
+        db_shutdown_driver,
+        db_open_select_cursor,
+        db_get_cursor_table,
+        db_get_table_number_of_columns,
+        db_fetch,
+        db_get_table_column,
+        db_get_column_name,
+        db_get_column_value,
+        db_convert_column_value_to_string,
+        db_test_value_isnull,
+        db_sqltype_to_Ctype,
+        db_get_column_sqltype,
+        DB_OK,
+        DB_SEQUENTIAL,
+        DB_NEXT,
+        DB_C_TYPE_STRING,
+    )
 except (ImportError, OSError, TypeError) as e:
     print("wxdigit.py: {}".format(e), file=sys.stderr)
 
@@ -760,7 +891,7 @@ class IVDigit:
         :return: None feature does not exist
         """
         if not Vect_line_alive(self.poMapInfo, ln_id):
-            return none
+            return None
 
         poCats = Vect_new_cats_struct()
         if Vect_read_line(self.poMapInfo, None, poCats, ln_id) < 0:
