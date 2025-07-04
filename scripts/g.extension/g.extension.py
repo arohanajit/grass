@@ -199,6 +199,13 @@ else:
     MAKE = "make"
 
 
+def _get_outdev():
+    """Get output device for subprocesses based on verbosity level"""
+    if gs.verbosity() <= 2:
+        return open(os.devnull, "w")
+    return sys.stdout
+
+
 class GitAdapter:
     """
     Basic class for listing and downloading GRASS GIS AddOns using git
@@ -1017,42 +1024,43 @@ def write_xml_modules(name, tree=None):
     :param name: file name
     :param tree: XML element tree
     """
-    file_ = open(name, "w")
-    file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    file_.write('<!DOCTYPE task SYSTEM "grass-addons.dtd">\n')
-    file_.write(f'<addons version="{VERSION[0]}">\n')
+    with open(name, "w") as file_:
+        file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        file_.write('<!DOCTYPE task SYSTEM "grass-addons.dtd">\n')
+        file_.write(f'<addons version="{VERSION[0]}">\n')
 
-    libgis_revison = gs.version()["libgis_revision"]
-    if tree is not None:
-        for tnode in tree.findall("task"):
-            indent = 4
-            file_.write('%s<task name="%s">\n' % (" " * indent, tnode.get("name")))
-            indent += 4
-            file_.write(
-                "%s<description>%s</description>\n"
-                % (" " * indent, tnode.find("description").text)
-            )
-            file_.write(
-                "%s<keywords>%s</keywords>\n"
-                % (" " * indent, tnode.find("keywords").text)
-            )
-            bnode = tnode.find("binary")
-            if bnode is not None:
-                file_.write("%s<binary>\n" % (" " * indent))
+        libgis_revison = gs.version()["libgis_revision"]
+        if tree is not None:
+            for tnode in tree.findall("task"):
+                indent = 4
+                file_.write('%s<task name="%s">\n' % (" " * indent, tnode.get("name")))
                 indent += 4
-                file_.writelines(
-                    "%s<file>%s</file>\n"
-                    % (" " * indent, os.path.join(options["prefix"], fnode.text))
-                    for fnode in bnode.findall("file")
+                file_.write(
+                    "%s<description>%s</description>\n"
+                    % (" " * indent, tnode.find("description").text)
+                )
+                file_.write(
+                    "%s<keywords>%s</keywords>\n"
+                    % (" " * indent, tnode.find("keywords").text)
+                )
+                bnode = tnode.find("binary")
+                if bnode is not None:
+                    file_.write("%s<binary>\n" % (" " * indent))
+                    indent += 4
+                    file_.writelines(
+                        "%s<file>%s</file>\n"
+                        % (" " * indent, os.path.join(options["prefix"], fnode.text))
+                        for fnode in bnode.findall("file")
+                    )
+                    indent -= 4
+                    file_.write("%s</binary>\n" % (" " * indent))
+                file_.write(
+                    '%s<libgis revision="%s" />\n' % (" " * indent, libgis_revison)
                 )
                 indent -= 4
-                file_.write("%s</binary>\n" % (" " * indent))
-            file_.write('%s<libgis revision="%s" />\n' % (" " * indent, libgis_revison))
-            indent -= 4
-            file_.write("%s</task>\n" % (" " * indent))
+                file_.write("%s</task>\n" % (" " * indent))
 
-    file_.write("</addons>\n")
-    file_.close()
+        file_.write("</addons>\n")
 
 
 def write_xml_extensions(name, tree=None):
@@ -1063,58 +1071,59 @@ def write_xml_extensions(name, tree=None):
     :param name: file name
     :param tree: XML element tree
     """
-    file_ = open(name, "w")
-    file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    file_.write('<!DOCTYPE task SYSTEM "grass-addons.dtd">\n')
-    file_.write(f'<addons version="{VERSION[0]}">\n')
+    with open(name, "w") as file_:
+        file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        file_.write('<!DOCTYPE task SYSTEM "grass-addons.dtd">\n')
+        file_.write(f'<addons version="{VERSION[0]}">\n')
 
-    libgis_revison = gs.version()["libgis_revision"]
-    if tree is not None:
-        for tnode in tree.findall("task"):
-            indent = 4
-            # extension name
-            file_.write('%s<task name="%s">\n' % (" " * indent, tnode.get("name")))
-            indent += 4
-
-            # file_.write(
-            #     "%s<description>%s</description>\n"
-            #     % (" " * indent, tnode.find("description").text)
-            # )
-            # file_.write(
-            #     "%s<keywords>%s</keywords>\n"
-            #     % (" " * indent, tnode.find("keywords").text)
-            # )
-
-            # extension files
-            bnode = tnode.find("binary")
-            if bnode is not None:
-                file_.write("%s<binary>\n" % (" " * indent))
+        libgis_revison = gs.version()["libgis_revision"]
+        if tree is not None:
+            for tnode in tree.findall("task"):
+                indent = 4
+                # extension name
+                file_.write('%s<task name="%s">\n' % (" " * indent, tnode.get("name")))
                 indent += 4
-                file_.writelines(
-                    "%s<file>%s</file>\n"
-                    % (" " * indent, os.path.join(options["prefix"], fnode.text))
-                    for fnode in bnode.findall("file")
+
+                # file_.write(
+                #     "%s<description>%s</description>\n"
+                #     % (" " * indent, tnode.find("description").text)
+                # )
+                # file_.write(
+                #     "%s<keywords>%s</keywords>\n"
+                #     % (" " * indent, tnode.find("keywords").text)
+                # )
+
+                # extension files
+                bnode = tnode.find("binary")
+                if bnode is not None:
+                    file_.write("%s<binary>\n" % (" " * indent))
+                    indent += 4
+                    file_.writelines(
+                        "%s<file>%s</file>\n"
+                        % (" " * indent, os.path.join(options["prefix"], fnode.text))
+                        for fnode in bnode.findall("file")
+                    )
+                    indent -= 4
+                    file_.write("%s</binary>\n" % (" " * indent))
+                # extension modules
+                mnode = tnode.find("modules")
+                if mnode is not None:
+                    file_.write("%s<modules>\n" % (" " * indent))
+                    indent += 4
+                    file_.writelines(
+                        "%s<module>%s</module>\n" % (" " * indent, fnode.text)
+                        for fnode in mnode.findall("module")
+                    )
+                    indent -= 4
+                    file_.write("%s</modules>\n" % (" " * indent))
+
+                file_.write(
+                    '%s<libgis revision="%s" />\n' % (" " * indent, libgis_revison)
                 )
                 indent -= 4
-                file_.write("%s</binary>\n" % (" " * indent))
-            # extension modules
-            mnode = tnode.find("modules")
-            if mnode is not None:
-                file_.write("%s<modules>\n" % (" " * indent))
-                indent += 4
-                file_.writelines(
-                    "%s<module>%s</module>\n" % (" " * indent, fnode.text)
-                    for fnode in mnode.findall("module")
-                )
-                indent -= 4
-                file_.write("%s</modules>\n" % (" " * indent))
+                file_.write("%s</task>\n" % (" " * indent))
 
-            file_.write('%s<libgis revision="%s" />\n' % (" " * indent, libgis_revison))
-            indent -= 4
-            file_.write("%s</task>\n" % (" " * indent))
-
-    file_.write("</addons>\n")
-    file_.close()
+        file_.write("</addons>\n")
 
 
 def write_xml_toolboxes(name, tree=None):
@@ -1125,31 +1134,30 @@ def write_xml_toolboxes(name, tree=None):
     :param name: file name
     :param tree: XML element tree
     """
-    file_ = open(name, "w")
-    file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-    file_.write('<!DOCTYPE toolbox SYSTEM "grass-addons.dtd">\n')
-    file_.write(f'<addons version="{VERSION[0]}">\n')
-    if tree is not None:
-        for tnode in tree.findall("toolbox"):
-            indent = 4
-            file_.write(
-                '%s<toolbox name="%s" code="%s">\n'
-                % (" " * indent, tnode.get("name"), tnode.get("code"))
-            )
-            indent += 4
-            file_.writelines(
-                '%s<correlate code="%s" />\n' % (" " * indent, tnode.get("code"))
-                for cnode in tnode.findall("correlate")
-            )
-            file_.writelines(
-                '%s<task name="%s" />\n' % (" " * indent, mnode.get("name"))
-                for mnode in tnode.findall("task")
-            )
-            indent -= 4
-            file_.write("%s</toolbox>\n" % (" " * indent))
+    with open(name, "w") as file_:
+        file_.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+        file_.write('<!DOCTYPE toolbox SYSTEM "grass-addons.dtd">\n')
+        file_.write(f'<addons version="{VERSION[0]}">\n')
+        if tree is not None:
+            for tnode in tree.findall("toolbox"):
+                indent = 4
+                file_.write(
+                    '%s<toolbox name="%s" code="%s">\n'
+                    % (" " * indent, tnode.get("name"), tnode.get("code"))
+                )
+                indent += 4
+                file_.writelines(
+                    '%s<correlate code="%s" />\n' % (" " * indent, tnode.get("code"))
+                    for cnode in tnode.findall("correlate")
+                )
+                file_.writelines(
+                    '%s<task name="%s" />\n' % (" " * indent, mnode.get("name"))
+                    for mnode in tnode.findall("task")
+                )
+                indent -= 4
+                file_.write("%s</toolbox>\n" % (" " * indent))
 
-    file_.write("</addons>\n")
-    file_.close()
+        file_.write("</addons>\n")
 
 
 def install_extension(source=None, url=None, xmlurl=None, branch=None):
@@ -1611,65 +1619,69 @@ def install_extension_win(name):
     source, url = resolve_source_code(url="{0}/{1}.zip".format(base_url, name))
 
     # to hide non-error messages from subprocesses
-    outdev = open(os.devnull, "w") if gs.verbosity() <= 2 else sys.stdout
+    outdev = _get_outdev()
+    try:
+        # download Addons ZIP file
+        os.chdir(TMPDIR)  # this is just to not leave something behind
+        srcdir = os.path.join(TMPDIR, name)
+        download_source_code(
+            source=source,
+            url=url,
+            name=name,
+            outdev=outdev,
+            directory=srcdir,
+            tmpdir=TMPDIR,
+        )
+        # collect module names and file names
+        module_list = []
+        module_name_pattern = re.compile(
+            r"^([d,g,i,m,p,r,s,t,v]|^db|^ps|^r3|^wx)\..*[\.py,\.exe]$"
+        )
+        for r, d, f in os.walk(srcdir):
+            for file in f:
+                # Filter GRASS module name patterns
+                if re.search(module_name_pattern, file):
+                    modulename = os.path.splitext(file)[0]
+                    module_list.append(modulename)
+        # remove duplicates in case there are .exe wrappers for python scripts
+        module_list = set(module_list)
 
-    # download Addons ZIP file
-    os.chdir(TMPDIR)  # this is just to not leave something behind
-    srcdir = os.path.join(TMPDIR, name)
-    download_source_code(
-        source=source,
-        url=url,
-        name=name,
-        outdev=outdev,
-        directory=srcdir,
-        tmpdir=TMPDIR,
-    )
+        # change shebang from python to python3
+        pyfiles = []
+        for r, d, f in os.walk(srcdir):
+            for file in f:
+                if file.endswith(".py"):
+                    pyfiles.append(os.path.join(r, file))
 
-    # collect module names and file names
-    module_list = []
-    module_name_pattern = re.compile(
-        r"^([d,g,i,m,p,r,s,t,v]|^db|^ps|^r3|^wx)\..*[\.py,\.exe]$"
-    )
-    for r, d, f in os.walk(srcdir):
-        for file in f:
-            # Filter GRASS module name patterns
-            if re.search(module_name_pattern, file):
-                modulename = os.path.splitext(file)[0]
-                module_list.append(modulename)
-    # remove duplicates in case there are .exe wrappers for python scripts
-    module_list = set(module_list)
+        for filename in pyfiles:
+            replace_shebang_win(filename)
 
-    # change shebang from python to python3
-    pyfiles = []
-    for r, d, f in os.walk(srcdir):
-        for file in f:
-            if file.endswith(".py"):
-                pyfiles.append(os.path.join(r, file))
+        # collect old files
+        old_file_list = []
+        for r, d, f in os.walk(options["prefix"]):
+            for filename in f:
+                fullname = os.path.join(r, filename)
+                old_file_list.append(fullname)
 
-    for filename in pyfiles:
-        replace_shebang_win(filename)
+        # copy Addons copy tree to destination directory
+        move_extracted_files(
+            extract_dir=srcdir,
+            target_dir=options["prefix"],
+            files=[f.name for f in Path(srcdir).iterdir()],
+        )
 
-    # collect old files
-    old_file_list = []
-    for r, d, f in os.walk(options["prefix"]):
-        for filename in f:
-            fullname = os.path.join(r, filename)
-            old_file_list.append(fullname)
+        # collect new files
+        file_list = []
+        for r, d, f in os.walk(options["prefix"]):
+            for filename in f:
+                fullname = os.path.join(r, filename)
+                if fullname not in old_file_list:
+                    file_list.append(fullname)
 
-    # copy Addons copy tree to destination directory
-    move_extracted_files(
-        extract_dir=srcdir, target_dir=options["prefix"], files=os.listdir(srcdir)
-    )
-
-    # collect new files
-    file_list = []
-    for r, d, f in os.walk(options["prefix"]):
-        for filename in f:
-            fullname = os.path.join(r, filename)
-            if fullname not in old_file_list:
-                file_list.append(fullname)
-
-    return 0, module_list, file_list
+        return 0, module_list, file_list
+    finally:
+        if outdev is not sys.stdout:
+            outdev.close()
 
 
 def download_source_code_svn(url, name, outdev, directory=None):
@@ -1785,8 +1797,9 @@ def fix_newlines(directory):
     for root, unused, files in os.walk(directory):
         for name in files:
             filename = os.path.join(root, name)
-            if is_binary_string(open(filename, "rb").read(1024)):
-                continue  # ignore binary files
+            with open(filename, "rb") as f:
+                if is_binary_string(f.read(1024)):
+                    continue  # ignore binary files
 
             # read content of text file
             data = Path(filename).read_bytes()
@@ -1808,20 +1821,19 @@ def extract_zip(name, directory, tmpdir):
         3,
     )
     try:
-        zip_file = zipfile.ZipFile(name, mode="r")
-        file_list = zip_file.namelist()
-        # we suppose we can write to parent of the given dir
-        # (supposing a tmp dir)
-        extract_dir = os.path.join(tmpdir, "extract_dir")
-        os.mkdir(extract_dir)
-        for subfile in file_list:
-            if "__pycache__" in subfile:
-                continue
-            zip_file.extract(subfile, extract_dir)
-        files = os.listdir(extract_dir)
-        move_extracted_files(extract_dir=extract_dir, target_dir=directory, files=files)
+        with zipfile.ZipFile(name) as zip_file:
+            extract_dir = os.path.join(tmpdir, "extract_dir")
+            os.mkdir(extract_dir)
+            for subfile in zip_file.namelist():
+                if subfile.endswith("/"):
+                    continue
+                zip_file.extract(subfile, extract_dir)
+            files = [f.name for f in Path(extract_dir).iterdir()]
+            move_extracted_files(
+                extract_dir=extract_dir, target_dir=directory, files=files
+            )
     except zipfile.BadZipfile as error:
-        gs.fatal(_("ZIP file is unreadable: {0}").format(error))
+        gs.fatal(_("Archive file is unreadable: {0}").format(error))
 
 
 # TODO: solve the other related formats
@@ -1836,26 +1848,18 @@ def extract_tar(name, directory, tmpdir):
     import tarfile
 
     try:
-        tar = tarfile.open(name)
-        extract_dir = os.path.join(tmpdir, "extract_dir")
-        os.mkdir(extract_dir)
-
-        # Extraction filters were added in Python 3.12,
-        # and backported to 3.8.17, 3.9.17, 3.10.12, and 3.11.4
-        # See
-        # https://docs.python.org/3.12/library/tarfile.html#tarfile-extraction-filter
-        # and https://peps.python.org/pep-0706/
-        # In Python 3.12, using `filter=None` triggers a DepreciationWarning,
-        # and in Python 3.14, `filter='data'` will be the default
-        if hasattr(tarfile, "data_filter"):
-            tar.extractall(path=extract_dir, filter="data")
-        else:
-            # Remove this when no longer needed
-            gs.warning(_("Extracting may be unsafe; consider updating Python"))
-            tar.extractall(path=extract_dir)
-
-        files = os.listdir(extract_dir)
-        move_extracted_files(extract_dir=extract_dir, target_dir=directory, files=files)
+        with tarfile.open(name) as tar:
+            extract_dir = os.path.join(tmpdir, "extract_dir")
+            os.mkdir(extract_dir)
+            if hasattr(tarfile, "data_filter"):
+                tar.extractall(path=extract_dir, filter="data")
+            else:
+                gs.warning(_("Extracting may be unsafe; consider updating Python"))
+                tar.extractall(path=extract_dir)
+            files = [f.name for f in Path(extract_dir).iterdir()]
+            move_extracted_files(
+                extract_dir=extract_dir, target_dir=directory, files=files
+            )
     except tarfile.TarError as error:
         gs.fatal(_("Archive file is unreadable: {0}").format(error))
 
@@ -1980,139 +1984,144 @@ def install_extension_std_platforms(name, source, url, branch):
     path_to_src_code_message = _("Path to the source code:")
 
     # to hide non-error messages from subprocesses
-    outdev = open(os.devnull, "w") if gs.verbosity() <= 2 else sys.stdout
+    outdev = _get_outdev()
+    try:
+        os.chdir(TMPDIR)  # this is just to not leave something behind
+        srcdir = os.path.join(TMPDIR, name)
+        srcdir, url = download_source_code(
+            source,
+            url,
+            name,
+            outdev,
+            directory=srcdir,
+            tmpdir=TMPDIR,
+            branch=branch,
+        )
+        create_md_if_missing(srcdir)
+        os.chdir(srcdir)
 
-    os.chdir(TMPDIR)  # this is just to not leave something behind
-    srcdir = os.path.join(TMPDIR, name)
-    srcdir, url = download_source_code(
-        source,
-        url,
-        name,
-        outdev,
-        directory=srcdir,
-        tmpdir=TMPDIR,
-        branch=branch,
-    )
-    create_md_if_missing(srcdir)
-    os.chdir(srcdir)
-
-    pgm_not_found_message = _(
-        "Module name not found. Check module Makefile syntax (PGM variable)."
-    )
-    # collect module names
-    module_list = []
-    for r, d, f in os.walk(srcdir):
-        for filename in f:
-            if filename == "Makefile":
-                # get the module name: PGM = <module name>
-                with open(os.path.join(r, "Makefile")) as fp:
-                    for line in fp:
-                        if re.match(r"PGM.*.=|PGM=", line):
-                            try:
-                                modulename = line.split("=")[1].strip()
-                                if modulename:
-                                    if modulename not in module_list:
-                                        module_list.append(modulename)
-                                else:
+        pgm_not_found_message = _(
+            "Module name not found. Check module Makefile syntax (PGM variable)."
+        )
+        # collect module names
+        module_list = []
+        for r, d, f in os.walk(srcdir):
+            for filename in f:
+                if filename == "Makefile":
+                    # get the module name: PGM = <module name>
+                    with open(os.path.join(r, "Makefile")) as fp:
+                        for line in fp:
+                            if re.match(r"PGM.*.=|PGM=", line):
+                                try:
+                                    modulename = line.split("=")[1].strip()
+                                    if modulename:
+                                        if modulename not in module_list:
+                                            module_list.append(modulename)
+                                    else:
+                                        gs.fatal(pgm_not_found_message)
+                                except IndexError:
                                     gs.fatal(pgm_not_found_message)
-                            except IndexError:
-                                gs.fatal(pgm_not_found_message)
 
-    # change shebang from python to python3
-    pyfiles = []
-    # r=root, d=directories, f = files
-    for r, d, f in os.walk(srcdir):
-        for file in f:
-            if file.endswith(".py"):
-                pyfiles.append(os.path.join(r, file))
+        # change shebang from python to python3
+        pyfiles = []
+        # r=root, d=directories, f = files
+        for r, d, f in os.walk(srcdir):
+            for file in f:
+                if file.endswith(".py"):
+                    pyfiles.append(os.path.join(r, file))
 
-    for filename in pyfiles:
-        with fileinput.FileInput(filename, inplace=True) as file:
-            for line in file:
-                print(
-                    line.replace("#!/usr/bin/env python\n", "#!/usr/bin/env python3\n"),
-                    end="",
-                )
+        for filename in pyfiles:
+            with fileinput.FileInput(filename, inplace=True) as file:
+                for line in file:
+                    print(
+                        line.replace(
+                            "#!/usr/bin/env python\n", "#!/usr/bin/env python3\n"
+                        ),
+                        end="",
+                    )
 
-    dirs = {
-        "bin": os.path.join(srcdir, "bin"),
-        "docs": os.path.join(srcdir, "docs"),
-        "html": os.path.join(srcdir, "docs", "html"),
-        "mkdocs": os.path.join(srcdir, "docs", "mkdocs"),
-        "rest": os.path.join(srcdir, "docs", "rest"),
-        "man": os.path.join(srcdir, "docs", "man"),
-        "script": os.path.join(srcdir, "scripts"),
-        # TODO: handle locales also for addons
-        #             'string'  : os.path.join(srcdir, 'locale'),
-        "string": srcdir,
-        "etc": os.path.join(srcdir, "etc"),
-    }
+        dirs = {
+            "bin": os.path.join(srcdir, "bin"),
+            "docs": os.path.join(srcdir, "docs"),
+            "html": os.path.join(srcdir, "docs", "html"),
+            "mkdocs": os.path.join(srcdir, "docs", "mkdocs"),
+            "rest": os.path.join(srcdir, "docs", "rest"),
+            "man": os.path.join(srcdir, "docs", "man"),
+            "script": os.path.join(srcdir, "scripts"),
+            # TODO: handle locales also for addons
+            #             'string'  : os.path.join(srcdir, 'locale'),
+            "string": srcdir,
+            "etc": os.path.join(srcdir, "etc"),
+        }
 
-    make_cmd = [
-        MAKE,
-        "MODULE_TOPDIR=%s" % gisbase.replace(" ", r"\ "),
-        "RUN_GISRC=%s" % os.environ["GISRC"],
-        "BIN=%s" % dirs["bin"],
-        "HTMLDIR=%s" % dirs["html"],
-        "MDDIR=%s" % dirs["mkdocs"],
-        "RESTDIR=%s" % dirs["rest"],
-        "MANBASEDIR=%s" % dirs["man"],
-        "SCRIPTDIR=%s" % dirs["script"],
-        "STRINGDIR=%s" % dirs["string"],
-        "ETC=%s" % os.path.join(dirs["etc"]),
-        "SOURCE_URL=%s" % url,
-    ]
+        make_cmd = [
+            MAKE,
+            "MODULE_TOPDIR=%s" % gisbase.replace(" ", r"\ "),
+            "RUN_GISRC=%s" % os.environ["GISRC"],
+            "BIN=%s" % dirs["bin"],
+            "HTMLDIR=%s" % dirs["html"],
+            "MDDIR=%s" % dirs["mkdocs"],
+            "RESTDIR=%s" % dirs["rest"],
+            "MANBASEDIR=%s" % dirs["man"],
+            "SCRIPTDIR=%s" % dirs["script"],
+            "STRINGDIR=%s" % dirs["string"],
+            "ETC=%s" % os.path.join(dirs["etc"]),
+            "SOURCE_URL=%s" % url,
+        ]
 
-    install_cmd = [
-        MAKE,
-        "MODULE_TOPDIR=%s" % gisbase,
-        "ARCH_DISTDIR=%s" % srcdir,
-        "INST_DIR=%s" % options["prefix"],
-        "install",
-    ]
+        install_cmd = [
+            MAKE,
+            "MODULE_TOPDIR=%s" % gisbase,
+            "ARCH_DISTDIR=%s" % srcdir,
+            "INST_DIR=%s" % options["prefix"],
+            "install",
+        ]
 
-    if flags["d"]:
-        gs.message("\n%s\n" % _("To compile run:"))
-        sys.stderr.write(" ".join(make_cmd) + "\n")
-        gs.message("\n%s\n" % _("To install run:"))
-        sys.stderr.write(" ".join(install_cmd) + "\n")
-        gs.message(f"\n{path_to_src_code_message}\n")
-        sys.stderr.write(f"{srcdir}\n")
-        return 0, None, None, None
+        if flags["d"]:
+            gs.message("\n%s\n" % _("To compile run:"))
+            sys.stderr.write(" ".join(make_cmd) + "\n")
+            gs.message("\n%s\n" % _("To install run:"))
+            sys.stderr.write(" ".join(install_cmd) + "\n")
+            gs.message(f"\n{path_to_src_code_message}\n")
+            sys.stderr.write(f"{srcdir}\n")
+            return 0, None, None, None
 
-    os.chdir(srcdir)
+        os.chdir(srcdir)
 
-    gs.message(_("Compiling..."))
-    if not os.path.exists(os.path.join(gisbase, "include", "Make", "Module.make")):
-        gs.fatal(_("Please install GRASS development package"))
+        gs.message(_("Compiling..."))
+        if not os.path.exists(os.path.join(gisbase, "include", "Make", "Module.make")):
+            gs.fatal(_("Please install GRASS development package"))
 
-    if gs.call(make_cmd, stdout=outdev) != 0:
-        gs.fatal(_("Compilation failed, sorry. Please check above error messages."))
+        if gs.call(make_cmd, stdout=outdev) != 0:
+            gs.fatal(_("Compilation failed, sorry. Please check above error messages."))
 
-    if flags["i"]:
-        gs.message(f"\n{path_to_src_code_message}\n")
-        sys.stderr.write(f"{srcdir}\n")
-        return 0, None, None, None
+        if flags["i"]:
+            gs.message(f"\n{path_to_src_code_message}\n")
+            sys.stderr.write(f"{srcdir}\n")
+            return 0, None, None, None
 
-    # collect old files
-    old_file_list = []
-    for r, d, f in os.walk(options["prefix"]):
-        for filename in f:
-            fullname = os.path.join(r, filename)
-            old_file_list.append(fullname)
+        # collect old files
+        old_file_list = []
+        for r, d, f in os.walk(options["prefix"]):
+            for filename in f:
+                fullname = os.path.join(r, filename)
+                old_file_list.append(fullname)
 
-    gs.message(_("Installing..."))
-    ret = gs.call(install_cmd, stdout=outdev)
+        gs.message(_("Installing..."))
+        ret = gs.call(install_cmd, stdout=outdev)
 
-    # collect new files
-    file_list = []
-    for r, d, f in os.walk(options["prefix"]):
-        for filename in f:
-            fullname = os.path.join(r, filename)
-            if fullname not in old_file_list:
-                file_list.append(fullname)
+        # collect new files
+        file_list = []
+        for r, d, f in os.walk(options["prefix"]):
+            for filename in f:
+                fullname = os.path.join(r, filename)
+                if fullname not in old_file_list:
+                    file_list.append(fullname)
 
-    return ret, module_list, file_list, os.path.join(srcdir)
+        return ret, module_list, file_list, os.path.join(srcdir)
+    finally:
+        if outdev is not sys.stdout:
+            outdev.close()
 
 
 def remove_extension(force=False):
@@ -2407,21 +2416,14 @@ def check_dirs():
 
 
 def update_manual_page(module):
-    """Fix manual page for addons which are at different directory
-    than core modules"""
-    if module.split(".", 1)[0] == "wx":
-        return  # skip for GUI modules
-
     gs.verbose(_("Manual page for <%s> updated") % module)
     # read original html file
     htmlfile = os.path.join(options["prefix"], "docs", "html", module + ".html")
     try:
-        oldfile = open(htmlfile)
-        shtml = oldfile.read()
+        shtml = Path(htmlfile).read_text()
     except OSError as error:
         gs.fatal(_("Unable to read manual page: %s") % error)
-    else:
-        oldfile.close()
+        return
 
     pos = []
 
@@ -2433,7 +2435,7 @@ def update_manual_page(module):
         pos.append(match.start(1))
 
     # find URIs
-    pattern = r"""<a href="([^"]+)">([^>]+)</a>"""
+    pattern = r"""<a href=\"([^\"]+)\">([^>]+)</a>"""
     addons = get_installed_extensions(force=True)
     if sys.platform != "win32":
         # Multi-addon
@@ -2461,12 +2463,9 @@ def update_manual_page(module):
 
     # write updated html file
     try:
-        newfile = open(htmlfile, "w")
-        newfile.write(ohtml)
+        Path(htmlfile).write_text(ohtml)
     except OSError as error:
         gs.fatal(_("Unable for write manual page: %s") % error)
-    else:
-        newfile.close()
 
 
 def resolve_install_prefix(path, to_system):
